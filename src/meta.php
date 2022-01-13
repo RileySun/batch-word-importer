@@ -21,9 +21,12 @@ class BatchImport {
 	}
 	
 	public static function submitAdminPage() {
-		include 'utils.php';
+		include 'importer.php';
 		if (isset($_POST['BatchImport'])) {
-			uploadFile($_FILES['zip']);
+			$importer = new Importer;
+			$result = $importer::init($_FILES['zip']);
+			//echo 'Result: '.$result;
+			echo ($result) ? 'Success' : 'Error';
 		}
 		//wp_redirect( $_SERVER['HTTP_REFERER'] );
 		//exit;
