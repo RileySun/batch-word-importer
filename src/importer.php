@@ -4,6 +4,8 @@ class Importer {
 	private static $path;
 	
 	public static function init($zipFile) {
+		ob_start();
+		
 		$uploadsPath = wp_upload_dir();
 		self::$path = $uploadsPath['basedir'].'/BatchImport';
 		
@@ -26,15 +28,11 @@ class Importer {
 		self::createCategories();
 		
 		//Create Articles
-		$articles = self::createArticles();
-		if (!$articles) {
-			return false;
-		}
+		self::createArticles();
 		
 		return true;
 		
 	}
-	
 	
 	//Actions
 	public static function cleanFolder() {		
@@ -86,8 +84,40 @@ class Importer {
 			$path = self::$path.'/Articles/'.$niche;
 			$articles = self::getAllFiles($path);
 			
+			$category = get_cat_ID($niche);
+			
 			foreach ($articles as &$article) {
-				error_log($article);
+				$rawName = explode('.', $article)[0];
+				$name =  str_replace('_', ' ', $rawName);
+				
+				$post = self::getPostByName($name);
+				
+				$postData = array();
+				$document = $path.'/'.$article;
+				
+				$content = self::parseDoc($document);
+				
+				if ($post != NULL) {
+					$postData = array(
+						'ID' => $post->ID,
+						'post_title' => $post->post_title,
+						'post_content' => $content,
+						'post_status' => $post->post_status,
+						'post_author' => $post->post_author,
+						'post_category' => $post->post_category
+					);
+				}
+				else {
+					$postData = array(
+						'post_title' => $name,
+						'post_content' => $content,
+						'post_status' => 'publish',
+						'post_author' => get_current_user_id(),
+						'post_category' => array($category)
+					);
+				}
+				
+				wp_insert_post($postData);
 			}
 		}
 		
@@ -114,10 +144,31 @@ class Importer {
 			rmdir($dir); 
 		} 
 	}
+	
+	public static function getPostByName($postName) {
+		$query = new WP_Query([
+			"post_type" => 'post',
+			"post_status" => array('publish', 'draft'),
+			"name" => $postName
+		]);
+		
+		return $query->have_posts() ? reset($query->posts) : NULL;
+	}
+	
+	//DOCX
+	public static function parseDoc($document){
+		$unformatted = self::openDoc($document);
+		$cleaned = self::removeCopyscape($unformatted);
+		$titled = self::insertTags($cleaned, '~', '<h1>');
+		$newLine = "
 
+";
+		$lineBreaks =  str_replace('|', $newLine, $titled);
+		return $lineBreaks;
+	}
+	
 	public static function openDoc($document){
-		$upload = wp_upload_dir();
-		$file = $upload['basedir'].'/BatchImport/'.$document;
+		$file = $document;
 	
 		$zip = new ZipArchive();
 	
@@ -125,13 +176,40 @@ class Importer {
 			return false;
 		}
 	
-		$xml = $zip->getFromName('word/document.xml');
+		$rawXML = $zip->getFromName('word/document.xml');
+		
+		$xml = simplexml_load_string($rawXML);
+		$namespaces = $xml->getNameSpaces(true);
+		$xml->registerXPathNamespace('w', $namespaces['w']);
+		$nodes = $xml->xpath('/w:document/w:body//w:t');
+		
+		$content = implode(' ', $nodes);
 	
-		//$content = str_replace('</w:r></w:p></w:tc><w:tc>', " ", $content);
-		//$content = str_replace('</w:r></w:p>', "\r\n", $content);
-		//$striped_content = strip_tags($content);
-	
-		return $xml;
+		return $content;
 	}
+	
+	public static function removeCopyscape($raw) {
+		return explode('*', $raw)[0];
+	}
+	
+	public static function insertTags($raw, $symbol, $replace) {
+		$contents = explode($symbol, $raw);
+		$isChar = true;
+		$out = '';
+		
+		$filtered = array_values(array_filter($contents));
+		
+		$startTag = $replace;
+		$endTag = substr($replace, 0, 1).'/'.substr($replace, 1);
+		$newLine = "
 
+";
+		
+		foreach($filtered as &$part) {			
+			$out .= ($isChar) ? $startTag.$part.$endTag.$newLine : $part;
+			$isChar = !$isChar;
+		}
+		
+		return $out;
+	}
 }

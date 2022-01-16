@@ -44,7 +44,6 @@ class BatchImport {
 		include 'templates/settings.php';
 	}
 	
-	
 	public static function batchImportEnqueAdminScripts($hook) {
 		if ($hook == 'post-new.php' || $hook == 'post.php') {
 			wp_register_style('batch-import-css', plugin_dir_url( __FILE__ ) . 'assets/batch-import.css', array(), '1.0.0', 'all' );
