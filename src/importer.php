@@ -159,7 +159,7 @@ class Importer {
 	public static function parseDoc($document){
 		$unformatted = self::openDoc($document);
 		$cleaned = self::removeCopyscape($unformatted);
-		$titled = self::insertTags($cleaned, '~', '<h1>');
+		$titled = self::insertTags($cleaned, '~', '<strong>');
 		$newLine = "
 
 ";

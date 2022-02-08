@@ -25,11 +25,10 @@ class BatchImport {
 		if (isset($_POST['BatchImport'])) {
 			$importer = new Importer;
 			$result = $importer::init($_FILES['zip']);
-			//echo 'Result: '.$result;
-			echo ($result) ? 'Success' : 'Error';
 		}
 		//wp_redirect( $_SERVER['HTTP_REFERER'] );
-		//exit;
+		wp_redirect(get_admin_url(null, 'edit.php'));
+		exit;
 	}
 	
 	public static function mainPage() {
