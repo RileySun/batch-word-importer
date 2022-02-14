@@ -9,6 +9,9 @@ class Importer {
 		$uploadsPath = wp_upload_dir();
 		self::$path = $uploadsPath['basedir'].'/BatchImport';
 		
+		//Create Folder if doesnt exist
+		self::checkFolder();
+		
 		//Delete all files in wp-content/uploads/BatchImport
 		self::cleanFolder();
 		
@@ -35,6 +38,12 @@ class Importer {
 	}
 	
 	//Actions
+	public static function checkFolder() {
+		if (!file_exists(self::$path) && !is_dir(self::$path) ) {
+			mkdir(self::$path);       
+		} 
+	}
+	
 	public static function cleanFolder() {		
 		$files = scandir(self::$path);
 		if (count($files) > 2) {
@@ -86,16 +95,17 @@ class Importer {
 			
 			$category = get_cat_ID($niche);
 			
-			foreach ($articles as &$article) {
-				$rawName = explode('.', $article)[0];
-				$name =  str_replace('_', ' ', $rawName);
-				
-				$post = self::getPostByName($name);
-				
-				$postData = array();
+			foreach ($articles as &$article) {				
 				$document = $path.'/'.$article;
 				
-				$content = self::parseDoc($document);
+				$firstPass = self::parseDoc($document);
+		
+				$name = self::getTitle($firstPass, '<strong>', '</strong>');
+				
+				$post = self::getPostByName($name);
+				$postData = array();
+				
+				$content = self::removeTitle($firstPass);
 				
 				if ($post != NULL) {
 					$postData = array(
@@ -186,6 +196,18 @@ class Importer {
 		$content = implode(' ', $nodes);
 	
 		return $content;
+	}
+	
+	public static function getTitle($raw, $start, $end) {
+		$subStart = strpos($raw, $start);
+		$subStart += strlen($start);  
+		$size = strpos($raw, $end, $subStart) - $subStart; 
+		return substr($raw, $subStart, $size); 
+	}
+	
+	public static function removeTitle($raw) {
+		$offset = strpos($raw, '</strong>') + 9;//9 is length of </strong>
+		return substr($raw, $offset);
 	}
 	
 	public static function removeCopyscape($raw) {
