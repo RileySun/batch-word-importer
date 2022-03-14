@@ -100,7 +100,8 @@ class Importer {
 				
 				$firstPass = self::parseDoc($document);
 		
-				$name = self::getTitle($firstPass, '<strong>', '</strong>');
+				$rawName = self::getTitle($firstPass, '<strong>', '</strong>');
+				$name = ucwords(self::removeDoubleSpaces($rawName));
 				
 				$post = self::getPostByName($name);
 				$postData = array();
@@ -232,6 +233,11 @@ class Importer {
 			$isChar = !$isChar;
 		}
 		
+		return $out;
+	}
+	
+	public static function removeDoubleSpaces($raw) {
+		$out = str_replace('  ', ' ', $raw);
 		return $out;
 	}
 }
