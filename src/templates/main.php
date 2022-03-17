@@ -15,11 +15,3 @@
 		<input type="submit" value="Submit" />
 	</form>
 </div>
-
-<?php
-
-$post = get_post(1680);
-var_dump($post->post_title);
-
-
-?>
