@@ -33,6 +33,9 @@ class Importer {
 		//Create Articles
 		self::createArticles();
 		
+		//Clean Up
+		self::cleanUpArticles();
+		
 		return true;
 		
 	}
@@ -135,6 +138,10 @@ class Importer {
 		return true;
 	}
 	
+	public static function cleanUpArticles() {
+		self::randomizePosts();	
+	}
+	
 	//Utils
 	public static function getAllFiles($path) {
 		$files = scandir($path);
@@ -164,6 +171,12 @@ class Importer {
 		]);
 		
 		return $query->have_posts() ? reset($query->posts) : NULL;
+	}
+	
+	public static function randomizePosts() {
+		include('randomizer.php');
+		$randomizer = new PostRandomizer;
+		$randomizer::init();
 	}
 	
 	//DOCX
@@ -237,7 +250,7 @@ class Importer {
 	}
 	
 	public static function removeDoubleSpaces($raw) {
-		$out = str_replace('  ', ' ', $raw);
+		$out = preg_replace('/\s\s+/', ' ',$raw);
 		return $out;
 	}
 }
