@@ -182,8 +182,11 @@ class Importer {
 	//DOCX
 	public static function parseDoc($document){
 		$unformatted = self::openDoc($document);
+		error_log($unformatted);
 		$cleaned = self::removeCopyscape($unformatted);
+		error_log($cleaned);
 		$titled = self::insertTags($cleaned, '~', '<strong>');
+		
 		$newLine = "
 
 ";
@@ -192,6 +195,34 @@ class Importer {
 	}
 	
 	public static function openDoc($document){
+		$striped_content = '';
+		$content = '';
+		
+		$zip = zip_open($document);
+		
+		if (!$zip || is_numeric($zip)) return false;
+		
+		while ($zip_entry = zip_read($zip)) {
+
+			if (zip_entry_open($zip, $zip_entry) == FALSE) continue;
+
+			if (zip_entry_name($zip_entry) != "word/document.xml") continue;
+
+			$content .= zip_entry_read($zip_entry, zip_entry_filesize($zip_entry));
+
+			zip_entry_close($zip_entry);
+        }// end while
+
+		zip_close($zip);
+
+		$content = str_replace('</w:r></w:p></w:tc><w:tc>', " ", $content);
+		$content = str_replace('</w:r></w:p>', "\r\n", $content);
+		$striped_content = strip_tags($content);
+
+		return $striped_content;
+	}
+	
+	public static function openDocOLD($document){
 		$file = $document;
 	
 		$zip = new ZipArchive();
@@ -229,6 +260,31 @@ class Importer {
 	}
 	
 	public static function insertTags($raw, $symbol, $replace) {
+		$contents = explode($symbol, $raw);
+		$isChar = true;
+		$out = '';
+		
+		if ($contents[0] == "\r\n") {
+			array_shift($contents);
+		}
+		
+		$filtered = array_values(array_filter($contents));
+		
+		$startTag = $replace;
+		$endTag = substr($replace, 0, 1).'/'.substr($replace, 1);
+		$newLine = "
+
+";
+		
+		foreach($filtered as &$part) {			
+			$out .= ($isChar) ? $startTag.$part.$endTag.$newLine : $part;
+			$isChar = !$isChar;
+		}
+		
+		return $out;
+	}
+	
+	public static function insertTagsOLD($raw, $symbol, $replace) {
 		$contents = explode($symbol, $raw);
 		$isChar = true;
 		$out = '';
